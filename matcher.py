@@ -140,37 +140,37 @@ def _create_game(
         price = final / 100.0 if final > 0 else None
         discount = discount if discount > 0 else None
     
-       # Extract review info
-        review_score = steam_result.get("review_score", 0)
-        review_desc = steam_result.get("review_score_desc", "")
+    # Extract review info
+    review_score = steam_result.get("review_score", 0)
+    review_desc = steam_result.get("review_score_desc", "")
     
-        # Calculate positive/negative from review score if available
-        positive = None
-        negative = None
-        if review_score and review_desc:
-            # Estimate based on review score description
-            positive = 100  # Placeholder
-            negative = 0
+    # Calculate positive/negative from review score if available
+    positive = None
+    negative = None
+    if review_score and review_desc:
+        # Estimate based on review score description
+        positive = 100  # Placeholder
+        negative = 0
     
-        # Extract release date (can be string or dict)
-        release_date = steam_result.get("release_date", "")
-        if isinstance(release_date, dict):
-            release_date = release_date.get("date", "")
+    # Extract release date (can be string or dict)
+    release_date = steam_result.get("release_date", "")
+    if isinstance(release_date, dict):
+        release_date = release_date.get("date", "")
     
-        return SteamGame(
-            original_title=original_title,
-            steam_title=name,
-            appid=appid,
-            url=f"https://store.steampowered.com/app/{appid}/",
-            match_score=score,
-            is_exact_match=is_exact,
-            price=price,
-            discount=discount,
-            positive_reviews=positive,
-            negative_reviews=negative,
-            review_score=review_score,
-            review_score_desc=review_desc,
-            released=release_date,
+    return SteamGame(
+        original_title=original_title,
+        steam_title=name,
+        appid=appid,
+        url=f"https://store.steampowered.com/app/{appid}/",
+        match_score=score,
+        is_exact_match=is_exact,
+        price=price,
+        discount=discount,
+        positive_reviews=positive,
+        negative_reviews=negative,
+        review_score=review_score,
+        review_score_desc=review_desc,
+        released=release_date,
         top_tags=[],  # Will be filled by get_game_details
         genres=[],
         developer=None,

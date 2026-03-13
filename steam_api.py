@@ -18,7 +18,7 @@ def search_games(title: str, limit: int = 20) -> List[Dict[str, Any]]:
         limit: Maximum number of results (default 20)
     
     Returns:
-        List of game dictionaries with appid, name, price, discount, etc.
+        List of game dictionaries with id, name, price, etc.
     
     Raises:
         SteamAPIError: If the API request fails
@@ -35,7 +35,31 @@ def search_games(title: str, limit: int = 20) -> List[Dict[str, Any]]:
     try:
         response = requests.get(url, params=params, timeout=30)
         response.raise_for_status()
-        return response.json().get("items", [])
+        data = response.json()
+        # Normalize response to expected format
+        results = []
+        for item in data.get("items", []):
+            metascore = item.get("metascore", 0)
+            if isinstance(metascore, str):
+                try:
+                    metascore = int(metascore)
+                except (ValueError, TypeError):
+                    metascore = 0
+            
+            results.append({
+                "appid": item.get("id", 0),
+                "name": item.get("name", ""),
+                "price_overview": {
+                    "initial": item.get("price", {}).get("initial", 0),
+                    "final": item.get("price", {}).get("final", 0),
+                    "discount_percent": 0
+                },
+                "metascore": metascore,
+                "platforms": item.get("platforms", {}),
+                "review_score": metascore,
+                "review_score_desc": "Very Positive" if metascore > 80 else "Mixed"
+            })
+        return results
     except requests.exceptions.RequestException as e:
         raise SteamAPIError(f"Failed to search Steam API: {e}")
 
