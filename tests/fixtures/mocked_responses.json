@@ -8,41 +8,16 @@
           "price_overview": {
             "initial": 3999,
             "final": 3999,
-            "discount_percent": 0,
-            "currency": "USD"
+            "discount_percent": 0
           },
-          "release_date": {
-            "date": "May 18, 2015"
-          },
+          "metascore": 93,
           "platforms": {
             "windows": true,
             "mac": false,
             "linux": false
           },
-          "review_score": 97,
-          "review_score_desc": "Overwhelmingly Positive",
-          "total_reviews": 500000
-        },
-        {
-          "appid": 378648,
-          "name": "The Witcher 3: Wild Hunt - Game of the Year Edition",
-          "price_overview": {
-            "initial": 4999,
-            "final": 4999,
-            "discount_percent": 0,
-            "currency": "USD"
-          },
-          "release_date": {
-            "date": "Aug 31, 2016"
-          },
-          "platforms": {
-            "windows": true,
-            "mac": false,
-            "linux": false
-          },
-          "review_score": 96,
-          "review_score_desc": "Overwhelmingly Positive",
-          "total_reviews": 100000
+          "review_score": 93,
+          "review_score_desc": "Very Positive"
         }
       ]
     },
@@ -54,20 +29,16 @@
           "price_overview": {
             "initial": 1499,
             "final": 1499,
-            "discount_percent": 0,
-            "currency": "USD"
+            "discount_percent": 0
           },
-          "release_date": {
-            "date": "Feb 26, 2016"
-          },
+          "metascore": 89,
           "platforms": {
             "windows": true,
             "mac": true,
             "linux": true
           },
-          "review_score": 98,
-          "review_score_desc": "Overwhelmingly Positive",
-          "total_reviews": 400000
+          "review_score": 89,
+          "review_score_desc": "Very Positive"
         }
       ]
     },
@@ -75,24 +46,41 @@
       "items": [
         {
           "appid": 374320,
-          "name": "Dark Souls III",
+          "name": "DARK SOULS III",
           "price_overview": {
             "initial": 5999,
             "final": 5999,
-            "discount_percent": 0,
-            "currency": "USD"
+            "discount_percent": 0
           },
-          "release_date": {
-            "date": "Apr 11, 2016"
-          },
+          "metascore": 89,
           "platforms": {
             "windows": true,
             "mac": false,
             "linux": false
           },
-          "review_score": 90,
-          "review_score_desc": "Very Positive",
-          "total_reviews": 150000
+          "review_score": 89,
+          "review_score_desc": "Very Positive"
+        }
+      ]
+    },
+    "dark souls iii": {
+      "items": [
+        {
+          "appid": 374320,
+          "name": "DARK SOULS III",
+          "price_overview": {
+            "initial": 5999,
+            "final": 5999,
+            "discount_percent": 0
+          },
+          "metascore": 89,
+          "platforms": {
+            "windows": true,
+            "mac": false,
+            "linux": false
+          },
+          "review_score": 89,
+          "review_score_desc": "Very Positive"
         }
       ]
     },
@@ -104,20 +92,16 @@
           "price_overview": {
             "initial": 999,
             "final": 999,
-            "discount_percent": 0,
-            "currency": "USD"
+            "discount_percent": 0
           },
-          "release_date": {
-            "date": "Apr 18, 2011"
-          },
+          "metascore": 95,
           "platforms": {
             "windows": true,
             "mac": true,
             "linux": true
           },
-          "review_score": 98,
-          "review_score_desc": "Overwhelmingly Positive",
-          "total_reviews": 600000
+          "review_score": 95,
+          "review_score_desc": "Very Positive"
         }
       ]
     },
@@ -129,20 +113,75 @@
           "price_overview": {
             "initial": 1499,
             "final": 1499,
-            "discount_percent": 0,
-            "currency": "USD"
+            "discount_percent": 0
           },
-          "release_date": {
-            "date": "Feb 23, 2017"
-          },
+          "metascore": 87,
           "platforms": {
             "windows": true,
             "mac": true,
             "linux": true
           },
+          "review_score": 87,
+          "review_score_desc": "Very Positive"
+        }
+      ]
+    },
+    "hades": {
+      "items": [
+        {
+          "appid": 1145360,
+          "name": "Hades",
+          "price_overview": {
+            "initial": 2499,
+            "final": 2499,
+            "discount_percent": 0
+          },
+          "metascore": 93,
+          "platforms": {
+            "windows": true,
+            "mac": true,
+            "linux": false
+          },
+          "review_score": 93,
+          "review_score_desc": "Very Positive"
+        },
+        {
+          "appid": 1145350,
+          "name": "Hades II",
+          "price_overview": {
+            "initial": 2999,
+            "final": 2999,
+            "discount_percent": 0
+          },
+          "metascore": 90,
+          "platforms": {
+            "windows": true,
+            "mac": true,
+            "linux": false
+          },
+          "review_score": 90,
+          "review_score_desc": "Very Positive"
+        }
+      ]
+    },
+    "disco elysium": {
+      "items": [
+        {
+          "appid": 632470,
+          "name": "Disco Elysium - The Final Cut",
+          "price_overview": {
+            "initial": 3999,
+            "final": 3999,
+            "discount_percent": 0
+          },
+          "metascore": 97,
+          "platforms": {
+            "windows": true,
+            "mac": true,
+            "linux": false
+          },
           "review_score": 97,
-          "review_score_desc": "Overwhelmingly Positive",
-          "total_reviews": 180000
+          "review_score_desc": "Very Positive"
         }
       ]
     }

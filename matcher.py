@@ -1,7 +1,13 @@
 """Title matching for CSV games to Steam games."""
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Any, Optional
 from rapidfuzz import fuzz, process
 from models import SteamGame
+
+# Roman numeral to integer mapping
+ROMAN_TO_INT = {
+    'i': 1, 'ii': 2, 'iii': 3, 'iv': 4, 'v': 5,
+    'vi': 6, 'vii': 7, 'viii': 8, 'ix': 9, 'x': 10
+}
 
 
 def clean_title(title: str) -> str:
@@ -13,9 +19,53 @@ def clean_title(title: str) -> str:
     return title
 
 
+def normalize_numbers(title: str) -> str:
+    """
+    Normalize Roman numerals and other number formats.
+    
+    Converts Roman numerals to digits for better matching.
+    """
+    import re
+    
+    # Replace Roman numerals with digits
+    def replace_roman(match):
+        roman = match.group(0).lower()
+        return str(ROMAN_TO_INT.get(roman, roman))
+    
+    # Match Roman numerals in order from largest to smallest to avoid partial matches
+    # This order ensures III is matched before I
+    title = re.sub(r'\b(VIII|VII|VI|IV|IX|X|III|II)\b', replace_roman, title, flags=re.IGNORECASE)
+    
+    # Handle single I last
+    title = re.sub(r'\bI\b', '1', title)
+    
+    return title
+
+
+def word_match(csv_title: str, steam_title: str) -> bool:
+    """
+    Check if CSV title matches steam title as complete words.
+    
+    This ensures "Hades" matches "Hades" but not "Hades II".
+    Also handles number normalization (3 vs III).
+    """
+    # Normalize numbers in both titles
+    csv_normalized = normalize_numbers(csv_title)
+    steam_normalized = normalize_numbers(steam_title)
+    
+    csv_words = set(csv_normalized.split())
+    steam_words = set(steam_normalized.split())
+    
+    # All CSV words must be in steam title
+    return csv_words.issubset(steam_words)
+
+
 def exact_match(steam_results: List[Dict[str, Any]], csv_title: str) -> Optional[Dict[str, Any]]:
     """
     Find exact match (case-insensitive) in Steam results.
+    
+    Uses word-level matching to avoid false positives like
+    "Hades" matching "Hades II".
     
     Args:
         steam_results: List of Steam game results
@@ -28,23 +78,36 @@ def exact_match(steam_results: List[Dict[str, Any]], csv_title: str) -> Optional
     
     for result in steam_results:
         steam_title = result.get("name", "").lower().strip()
-        # Clean Steam title too
         cleaned_steam = clean_title(steam_title)
         
-        if cleaned_csv == cleaned_steam or cleaned_csv in steam_title or steam_title in cleaned_csv:
+        # Exact match after cleaning
+        if cleaned_csv == cleaned_steam:
             return result
+        
+        # Word-level match: all words in CSV must appear in Steam title
+        # This handles "Witcher 3" -> "The Witcher 3: Wild Hunt"
+        if word_match(cleaned_csv, cleaned_steam):
+            return result
+        
+        # Check if CSV title matches the base name (before suffixes like "- The Final Cut")
+        # Split on common suffix indicators
+        for suffix_sep in [" - ", " -–", ":", ","]:
+            if suffix_sep in cleaned_steam:
+                base_steam = cleaned_steam.split(suffix_sep)[0].strip()
+                if cleaned_csv == base_steam:
+                    return result
     
     return None
 
 
-def fuzzy_match(steam_results: List[Dict[str, Any]], csv_title: str, threshold: int = 60) -> List[Dict[str, Any]]:
+def fuzzy_match(steam_results: List[Dict[str, Any]], csv_title: str, threshold: int = 80) -> List[Dict[str, Any]]:
     """
     Find fuzzy matches using RapidFuzz.
     
     Args:
         steam_results: List of Steam game results
         csv_title: Title from CSV file
-        threshold: Minimum match score (default 60)
+        threshold: Minimum match score (default 80 for reasonable matching)
     
     Returns:
         List of matches sorted by score (highest first)
@@ -71,7 +134,7 @@ def fuzzy_match(steam_results: List[Dict[str, Any]], csv_title: str, threshold: 
                 "score": score,
                 "title": title,
                 "is_exact": score >= 95,
-                "is_low_confidence": 60 <= score < 85
+                "is_low_confidence": 90 <= score < 95
             })
     
     return results
@@ -80,6 +143,11 @@ def fuzzy_match(steam_results: List[Dict[str, Any]], csv_title: str, threshold: 
 def match_games(steam_results: List[Dict[str, Any]], csv_title: str) -> SteamGame:
     """
     Match a CSV title to Steam games and return best match.
+    
+    Uses a multi-step approach:
+    1. Try exact word-level match
+    2. Check first 10 results for word-level matches
+    3. Fall back to fuzzy matching with high threshold
     
     Args:
         steam_results: List of Steam game results
@@ -93,7 +161,15 @@ def match_games(steam_results: List[Dict[str, Any]], csv_title: str) -> SteamGam
     if exact:
         return _create_game(exact, csv_title, score=100.0, is_exact=True)
     
-    # Try fuzzy match
+    # Check first 10 results for word-level matches
+    # This handles cases like "Hades" where API returns "Hades II" first
+    check_count = min(len(steam_results), 10)
+    for result in steam_results[:check_count]:
+        steam_name = result.get("name", "").lower()
+        if word_match(clean_title(csv_title), clean_title(steam_name)):
+            return _create_game(result, csv_title, score=100.0, is_exact=False)
+    
+    # Try fuzzy match on all results
     matches = fuzzy_match(steam_results, csv_title)
     
     if matches:

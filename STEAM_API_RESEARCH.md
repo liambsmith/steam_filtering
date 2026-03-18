@@ -32,7 +32,39 @@ This report provides a detailed analysis of Steam APIs for building a game match
 | SteamApis | Free tier | Varies | Alternative when official APIs fail |
 | Apify | Paid | Varies | Large-scale scraping |
 
-**Recommended Approach:** Use official APIs with caching and fuzzy matching
+**Recommended Approach:** Use storefront API with caching and fuzzy matching
+
+**Note:** This project uses `store.steampowered.com/api/storesearch/` as the primary API because:
+- No API key required
+- Works reliably for game search
+- Adequate for personal tool usage
+- Official Web API endpoints often require API keys
+
+For more details on API usage terms, see [STEAM_API_TERMS.md](STEAM_API_TERMS.md).
+
+---
+
+## API Terms of Use Summary
+
+### Rate Limits
+- **Store API:** ~200 requests/5 minutes
+- **Web API:** 100,000 calls/day (requires API key)
+
+### Key Requirements
+1. **No Marketing Use:** Cannot use API for unsolicited marketing
+2. **API Key Confidentiality:** If using API key, must keep confidential
+3. **Privacy Policy:** Required if storing user data
+4. **"As Is" Terms:** No warranties provided by Valve
+5. **Attribution:** Should include Steam/Valve attribution
+6. **Jurisdiction:** Washington State, USA
+
+### What This Means for Steam Filter
+- ✅ Personal use is fine (no privacy policy needed)
+- ✅ Caching implemented to minimize API calls
+- ✅ Will add Steam attribution in output
+- ✅ Accept "as is" data terms
+
+See [STEAM_API_TERMS.md](STEAM_API_TERMS.md) for full details.
 
 ---
 
@@ -126,13 +158,15 @@ https://store.steampowered.com/api/appdetails/?appids=123456&l=en
 - **Key is Free:** No cost, unlimited for reasonable use
 - **Key Format:** 32-character hexadecimal string
 
+**Important Finding (2026):** Many ISteamStore endpoints require an API key to function. The `searchAllApps` endpoint tested returned 404 without a key.
+
 ### 1.4 Rate Limits
 
 | Endpoint | Rate Limit | Notes |
 |----------|------------|-------|
-| ISteamStore | 100,000 requests/hour | Per IP address |
-| ISteamApps | 100,000 requests/hour | Per IP address |
-| Store endpoints | 200 requests/5 minutes | More restrictive |
+| ISteamStore | 100,000 requests/hour | Per IP address (with API key) |
+| ISteamApps | 100,000 requests/hour | Per IP address (with API key) |
+| Store endpoints | 200 requests/5 minutes | No API key required |
 
 **Important:** The `GetAppList` API was deprecated in November 2025 because "it can no longer scale to the number of items available on Steam."
 
@@ -511,34 +545,54 @@ def calculate_confidence(csv_name, steam_name, match_type):
 
 ### 6.4 Recommended Approach for CSV Game Title Matching
 
-1. **Build a Name-to-AppID Cache:**
-   - Download the full app list periodically
-   - Create a searchable index of game names
-   - Update cache daily or weekly
+**Current Approach (Storefront API - No Key Required):**
 
-2. **Use Multiple Matching Strategies:**
-   ```python
-   strategies = [
-       {'name': 'exact', 'fn': lambda csv, steam: csv == steam},
-       {'name': 'normalized', 'fn': lambda csv, steam: normalize(csv) == normalize(steam)},
-       {'name': 'fuzzy', 'fn': lambda csv, steam: levenshtein(csv, steam) < threshold},
-       {'name': 'partial', 'fn': lambda csv, steam: csv in steam or steam in csv}
-   ]
-   ```
+Use `store.steampowered.com/api/storesearch/` - no API key, works out of the box.
 
-3. **Fallback Chain:**
-   ```
-   1. Check local cache
-   2. Search via ISteamStore
-   3. If no results, try store.steampowered.com/search
-   4. If still no results, mark as unmatched
-   ```
+**Why This Works:**
+- No authentication required
+- Reliable for game search
+- Adequate rate limits for personal use
+- Properly normalized response format
 
-4. **Handle Edge Cases:**
-   - Free games (may not appear in all searches)
-   - Early Access games
-   - Games with similar names (check release dates)
-   - Regional availability differences
+**Implementation:**
+```python
+# Primary search endpoint (storefront)
+url = "http://store.steampowered.com/api/storesearch/"
+params = {
+    "term": query,
+    "country": "US",
+    "language": "english",
+    "cc": "us",
+    "count": 20
+}
+```
+
+**Fallback Strategy:**
+```
+1. Check local cache first
+2. Search via store.steampowered.com/search
+3. Apply matching logic (exact, normalized, fuzzy)
+4. If no match found, mark as unmatched
+```
+
+**Handle Edge Cases:**
+- Free games (may appear lower in results)
+- Games with similar names (use fuzzy matching with high threshold)
+- Regional availability differences (set country parameter)
+- Name variations (normalize titles before matching)
+
+**Future Enhancement (Optional):**
+- Get API key from https://steamcommunity.com/dev/apikey
+- Use ISteamStore endpoints for potentially better results
+- Higher rate limits (100k/day vs ~200/5min)
+- Not required for current use case
+
+**Recommendation:**
+- ✅ Continue with storefront API (works well, no key needed)
+- ✅ Implement caching to minimize API calls
+- ✅ Focus on improving matching logic
+- ⚠️ Consider API key only if rate limits become an issue
 
 ---
 

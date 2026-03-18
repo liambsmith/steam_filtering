@@ -1,0 +1,6 @@
+# Steam API Key
+# Get your key from: https://steamcommunity.com/dev/apikey
+# This file should NOT be committed to git (added to .gitignore)
+# Format: STEAM_API_KEY=your_32_character_key_here
+
+STEAM_API_KEY=dummy_key_for_development_only
