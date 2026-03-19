@@ -25,10 +25,10 @@ def print_table(games: List[SteamGame], max_tags: int = 3):
         # Format match indicator
         if game.is_exact_match:
             match_str = "✓ Exact"
-        elif game.match_score < 60:
-            match_str = f"✗ {game.match_score:.0f}%"
+        elif game.match_score < 70:
+            match_str = "🔍 Fuzzy"
         else:
-            match_str = f"⚠ {game.match_score:.0f}%"
+            match_str = "⚠ Subset"
         
         # Format rating
         if game.review_score:
@@ -54,8 +54,9 @@ def print_table(games: List[SteamGame], max_tags: int = 3):
     
     # Summary
     exact = sum(1 for g in games if g.is_exact_match)
-    low_conf = sum(1 for g in games if g.match_score < 60)
-    print(f"\nSummary: {len(games)} games processed ({exact} exact match, {low_conf} unmatched)")
+    subset = sum(1 for g in games if not g.is_exact_match and g.match_score >= 70)
+    fuzzy = sum(1 for g in games if g.match_score < 70)
+    print(f"\nSummary: {len(games)} games processed ({exact} exact, {subset} subset, {fuzzy} fuzzy)")
 
 
 def export_csv(games: List[SteamGame], filepath: str):

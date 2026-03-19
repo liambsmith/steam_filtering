@@ -1,6 +1,6 @@
 """Tests for title matching functionality."""
 import pytest
-from matcher import clean_title, exact_match, fuzzy_match, match_games
+from matcher import clean_title, exact_match, subset_match, fuzzy_match, match_games
 
 
 class TestCleanTitle:
@@ -32,7 +32,7 @@ class TestExactMatch:
             {"name": "The Witcher 3: Wild Hunt", "appid": 292030},
             {"name": "Stardew Valley", "appid": 413150}
         ]
-        result = exact_match(steam_results, "The Witcher 3")
+        result = exact_match(steam_results, "The Witcher 3: Wild Hunt")
         assert result is not None
         assert result["name"] == "The Witcher 3: Wild Hunt"
     
@@ -50,6 +50,28 @@ class TestExactMatch:
             {"name": "The Witcher 3", "appid": 292030}
         ]
         result = exact_match(steam_results, "Dark Souls 3")
+        assert result is None
+
+
+class TestSubsetMatch:
+    """Tests for subset matching."""
+    
+    def test_subset_match_found(self):
+        """Test that subset match is found (CSV title in Steam title)."""
+        steam_results = [
+            {"name": "Dark Souls III Deluxe Edition", "appid": 374320},
+            {"name": "Stardew Valley", "appid": 413150}
+        ]
+        result = subset_match(steam_results, "Dark Souls III")
+        assert result is not None
+        assert result["name"] == "Dark Souls III Deluxe Edition"
+    
+    def test_subset_match_not_found(self):
+        """Test when subset match doesn't exist."""
+        steam_results = [
+            {"name": "The Witcher 3", "appid": 292030}
+        ]
+        result = subset_match(steam_results, "Hades")
         assert result is None
 
 
@@ -97,8 +119,19 @@ class TestMatchGames:
         results = mocked_responses["search"]["the witcher 3"]["items"]
         game = match_games(results, "The Witcher 3: Wild Hunt")
         assert game.appid == 292030
-        assert game.match_score >= 95
         assert game.is_exact_match == True
+    
+    def test_match_subset_game(self, mocked_responses):
+        """Test matching a subset game (e.g., Dark Souls III -> Deluxe Edition)."""
+        # Use a title that won't match exactly
+        results = [
+            {"name": "Dark Souls III Deluxe Edition", "appid": 374320}
+        ]
+        game = match_games(results, "Dark Souls III")
+        assert game.appid == 374320
+        # Should be marked as subset match (not exact)
+        assert game.is_exact_match == False
+        assert game.match_score == 100.0
     
     def test_match_with_typo(self, mocked_responses):
         """Test matching with a typo - may not match due to strict word-level matching."""

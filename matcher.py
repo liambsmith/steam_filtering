@@ -3,12 +3,6 @@ from typing import List, Dict, Any, Optional
 from rapidfuzz import fuzz, process
 from models import SteamGame
 
-# Roman numeral to integer mapping
-ROMAN_TO_INT = {
-    'i': 1, 'ii': 2, 'iii': 3, 'iv': 4, 'v': 5,
-    'vi': 6, 'vii': 7, 'viii': 8, 'ix': 9, 'x': 10
-}
-
 
 def clean_title(title: str) -> str:
     """Clean and normalize a game title."""
@@ -19,53 +13,9 @@ def clean_title(title: str) -> str:
     return title
 
 
-def normalize_numbers(title: str) -> str:
-    """
-    Normalize Roman numerals and other number formats.
-    
-    Converts Roman numerals to digits for better matching.
-    """
-    import re
-    
-    # Replace Roman numerals with digits
-    def replace_roman(match):
-        roman = match.group(0).lower()
-        return str(ROMAN_TO_INT.get(roman, roman))
-    
-    # Match Roman numerals in order from largest to smallest to avoid partial matches
-    # This order ensures III is matched before I
-    title = re.sub(r'\b(VIII|VII|VI|IV|IX|X|III|II)\b', replace_roman, title, flags=re.IGNORECASE)
-    
-    # Handle single I last
-    title = re.sub(r'\bI\b', '1', title)
-    
-    return title
-
-
-def word_match(csv_title: str, steam_title: str) -> bool:
-    """
-    Check if CSV title matches steam title as complete words.
-    
-    This ensures "Hades" matches "Hades" but not "Hades II".
-    Also handles number normalization (3 vs III).
-    """
-    # Normalize numbers in both titles
-    csv_normalized = normalize_numbers(csv_title)
-    steam_normalized = normalize_numbers(steam_title)
-    
-    csv_words = set(csv_normalized.split())
-    steam_words = set(steam_normalized.split())
-    
-    # All CSV words must be in steam title
-    return csv_words.issubset(steam_words)
-
-
 def exact_match(steam_results: List[Dict[str, Any]], csv_title: str) -> Optional[Dict[str, Any]]:
     """
     Find exact match (case-insensitive) in Steam results.
-    
-    Uses word-level matching to avoid false positives like
-    "Hades" matching "Hades II".
     
     Args:
         steam_results: List of Steam game results
@@ -83,31 +33,43 @@ def exact_match(steam_results: List[Dict[str, Any]], csv_title: str) -> Optional
         # Exact match after cleaning
         if cleaned_csv == cleaned_steam:
             return result
-        
-        # Word-level match: all words in CSV must appear in Steam title
-        # This handles "Witcher 3" -> "The Witcher 3: Wild Hunt"
-        if word_match(cleaned_csv, cleaned_steam):
-            return result
-        
-        # Check if CSV title matches the base name (before suffixes like "- The Final Cut")
-        # Split on common suffix indicators
-        for suffix_sep in [" - ", " -–", ":", ","]:
-            if suffix_sep in cleaned_steam:
-                base_steam = cleaned_steam.split(suffix_sep)[0].strip()
-                if cleaned_csv == base_steam:
-                    return result
     
     return None
 
 
-def fuzzy_match(steam_results: List[Dict[str, Any]], csv_title: str, threshold: int = 80) -> List[Dict[str, Any]]:
+def subset_match(steam_results: List[Dict[str, Any]], csv_title: str) -> Optional[Dict[str, Any]]:
+    """
+    Find match where CSV title is a substring of Steam title.
+    
+    Args:
+        steam_results: List of Steam game results
+        csv_title: Title from CSV file
+    
+    Returns:
+        Best match dictionary or None
+    """
+    cleaned_csv = clean_title(csv_title)
+    
+    for result in steam_results:
+        steam_title = result.get("name", "").lower().strip()
+        cleaned_steam = clean_title(steam_title)
+        
+        # Check if CSV title is a substring of Steam title
+        # This handles "Dark Souls III" -> "Dark Souls III Deluxe Edition"
+        if cleaned_csv in cleaned_steam:
+            return result
+    
+    return None
+
+
+def fuzzy_match(steam_results: List[Dict[str, Any]], csv_title: str, threshold: int = 70) -> List[Dict[str, Any]]:
     """
     Find fuzzy matches using RapidFuzz.
     
     Args:
         steam_results: List of Steam game results
         csv_title: Title from CSV file
-        threshold: Minimum match score (default 80 for reasonable matching)
+        threshold: Minimum match score (default 70 for reasonable matching)
     
     Returns:
         List of matches sorted by score (highest first)
@@ -134,7 +96,7 @@ def fuzzy_match(steam_results: List[Dict[str, Any]], csv_title: str, threshold: 
                 "score": score,
                 "title": title,
                 "is_exact": score >= 95,
-                "is_low_confidence": 90 <= score < 95
+                "is_low_confidence": 70 <= score < 95
             })
     
     return results
@@ -145,9 +107,9 @@ def match_games(steam_results: List[Dict[str, Any]], csv_title: str) -> SteamGam
     Match a CSV title to Steam games and return best match.
     
     Uses a multi-step approach:
-    1. Try exact word-level match
-    2. Check first 10 results for word-level matches
-    3. Fall back to fuzzy matching with high threshold
+    1. Try exact match
+    2. Try subset match (CSV title is substring of Steam title)
+    3. Fall back to first result with fuzzy warning
     
     Args:
         steam_results: List of Steam game results
@@ -156,31 +118,24 @@ def match_games(steam_results: List[Dict[str, Any]], csv_title: str) -> SteamGam
     Returns:
         SteamGame object with match information
     """
-    # Try exact match first
+    # Step 1: Try exact match
     exact = exact_match(steam_results, csv_title)
     if exact:
         return _create_game(exact, csv_title, score=100.0, is_exact=True)
     
-    # Check first 10 results for word-level matches
-    # This handles cases like "Hades" where API returns "Hades II" first
-    check_count = min(len(steam_results), 10)
-    for result in steam_results[:check_count]:
-        steam_name = result.get("name", "").lower()
-        if word_match(clean_title(csv_title), clean_title(steam_name)):
-            return _create_game(result, csv_title, score=100.0, is_exact=False)
+    # Step 2: Try subset match (e.g., "Dark Souls III" -> "Dark Souls III Deluxe Edition")
+    subset = subset_match(steam_results, csv_title)
+    if subset:
+        return _create_game(subset, csv_title, score=100.0, is_exact=False)
     
-    # Try fuzzy match on all results
-    matches = fuzzy_match(steam_results, csv_title)
-    
-    if matches:
-        best = matches[0]
-        return _create_game(
-            best["result"],
-            csv_title,
-            score=best["score"],
-            is_exact=best["is_exact"],
-            is_low_confidence=best["is_low_confidence"]
-        )
+    # Step 3: Fallback to first result with warning
+    # Steam API returns results in relevance order, so first result is usually best
+    if steam_results:
+        first = steam_results[0]
+        # Calculate fuzzy score for user warning
+        from rapidfuzz import fuzz
+        score = fuzz.WRatio(clean_title(csv_title), first.get("name", "").lower())
+        return _create_game(first, csv_title, score=score, is_exact=False)
     
     # No match found - return placeholder
     return SteamGame(
