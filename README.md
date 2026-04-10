@@ -5,7 +5,7 @@ A CLI tool to help you sort through unredeemed Steam game keys from a CSV file a
 ## Features
 
 - Import game titles from CSV file
-- Match titles to Steam games (exact + fuzzy matching)
+- Match titles to Steam games (exact, subset, and fuzzy matching)
 - Enrich with Steam metadata (ratings, tags, genres, release date)
 - Filter by review rating and tags
 - Sort by various criteria
@@ -85,6 +85,18 @@ Stardew Valley
 The tool will display a formatted table:
 
 ```
+=======================================================================================================================
+ORIGINAL TITLE               STEAM TITLE                     RATING       MATCH      TAGS
+=======================================================================================================================
+The Witcher 3: Wild Hunt     The Witcher 3: Wild Hunt        93%          ✓ Exact    RPG, Open World, Story Rich (+2)
+Stardew Valley               Stardew Valley                  89%          ✓ Exact    Farming Sim, Relaxing, Pixel Graphics (+5)
+Dark Souls III               DARK SOULS III Deluxe Edition   N/A          ⚠ Subset   Dark Fantasy, Challenging, Souls-like (+8)
+Portal 2                     Portal 2                        95%          ✓ Exact    Puzzle, Co-op, Sci-fi (+4)
+Hollow Knight                Hollow Knight                   87%          ✓ Exact    Metroidvania, Dark Fantasy, Platformer (+3)
+=======================================================================================================================
+
+Summary: 5 games processed (4 exact, 1 subset, 0 fuzzy)
+```
 ========================================================================================================================
 ORIGINAL TITLE               STEAM TITLE                     RATING       MATCH      TAGS
 ========================================================================================================================
@@ -119,26 +131,27 @@ Options:
 
 ## How It Works
 
-1. **Title Matching**:
-   - First attempts exact match (case-insensitive)
-   - Falls back to fuzzy matching using RapidFuzz (weighted ratio)
-   - Scores: ≥95% = exact, 85-94% = fuzzy, 60-84% = low confidence, <60% = unmatched
+1. **Title Matching** (3-step approach):
+    - **Exact match**: Case-insensitive comparison (e.g., "Hades" → "Hades")
+    - **Subset match**: CSV title is substring of Steam title (e.g., "Dark Souls III" → "Dark Souls III Deluxe Edition")
+    - **Fuzzy fallback**: First result from Steam API when no exact/subset match found
+    - Match labels: ✓ Exact, ⚠ Subset, 🔍 Fuzzy
 
 2. **Steam API Integration**:
-   - Uses Steam Store Search API to find games by title
-   - Fetches game details (tags, reviews, release date, etc.)
-   - Rate limit: 100k requests/day
+    - Uses Steam Store Search API (store.steampowered.com/api/storesearch/)
+    - No API key required for basic functionality
+    - Fetches game details (ratings, metascore, platforms, etc.)
+    - Rate limit: ~200 requests/5 minutes
 
 3. **Caching**:
-   - SQLite database (`steam_cache.db`) stores API responses
-   - Search results cached for 30 days
-   - Game details cached for 7 days
-   - Improves performance for repeated runs
+    - SQLite database (`steam_cache.db`) stores API responses
+    - Prevents redundant API calls
+    - Improves performance for repeated runs
 
 4. **Filtering**:
-   - Review rating filter (minimum positive %)
-   - Tag filter (exact or partial match)
-   - Sort by rating, match score, or release date
+    - Review rating filter (minimum metascore)
+    - Tag filter (partial match)
+    - Sort by rating, match score, or release date
 
 ## Project Structure
 
@@ -147,7 +160,7 @@ steam_filtering/
 ├── main.py              # CLI entry point
 ├── cli.py               # Typer commands
 ├── steam_api.py         # Steam Web API client
-├── matcher.py           # Title matching (exact + fuzzy)
+├── matcher.py           # Title matching (exact, subset, fuzzy)
 ├── cache.py             # SQLite caching
 ├── models.py            # Pydantic data models
 ├── output.py            # Export handlers
