@@ -117,16 +117,16 @@ def search_games(title, limit=20):  # no type hints
 - **Keep concise**: 1-3 sentence summary
 
 ```python
-def word_match(csv_title: str, steam_title: str) -> bool:
+def exact_match(steam_results: List[Dict[str, Any]], csv_title: str) -> Optional[Dict[str, Any]]:
     """
-    Check if CSV title matches steam title as complete words.
+    Find exact case-insensitive match in Steam results.
     
-    This ensures "Hades" matches "Hades" but not "Hades II".
-    Also handles number normalization (3 vs III).
+    Args:
+        steam_results: List of Steam game results
+        csv_title: Title from CSV file
     
-    Requires:
-    - All CSV words appear in steam title
-    - Same number of words (prevents "Hades" from matching "Hades II")
+    Returns:
+        Best match dictionary or None
     """
     ...
 ```
@@ -252,10 +252,10 @@ matches = process.extract(
 
 ## Known Issues & Workarounds
 
-1. **Hades vs Hades II**: Use word-level matching to prevent false positives
-2. **Roman numerals**: Normalize III to 3 for better matching
-3. **API rate limits**: Implement caching to reduce API calls
-4. **Typos**: Current matching is strict - users should have clean titles
+1. **Exact matching only**: CSV titles should be full game names for best results
+2. **Subset matching**: Handles "Dark Souls III" → "Dark Souls III Deluxe Edition"
+3. **API rate limits**: Implemented SQLite caching (30-day TTL for search results)
+4. **Fuzzy fallback**: First result from Steam API used when no exact/subset match
 
 ## References
 - [Pydantic Documentation](https://docs.pydantic.dev/)
